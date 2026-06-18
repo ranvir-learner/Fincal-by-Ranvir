@@ -12,6 +12,7 @@ interface InputControlProps {
   suffix?: string;
   hint?: string;
   warningMessage?: string;
+  showSlider?: boolean;
 }
 
 const formatIndianComma = (valStr: string | number) => {
@@ -39,6 +40,7 @@ export const InputControl: React.FC<InputControlProps> = ({
   suffix,
   hint = '',
   warningMessage,
+  showSlider = false,
 }) => {
   const [warning, setWarning] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -70,7 +72,7 @@ export const InputControl: React.FC<InputControlProps> = ({
     setLocalVal(formatIndianComma(rawVal));
     
     if (rawVal === '' || rawVal === '-' || rawVal === '-.') {
-       onChange(min);
+       onChange(0);
        setWarning(null);
        return;
     }
@@ -81,7 +83,7 @@ export const InputControl: React.FC<InputControlProps> = ({
     setWarning(null);
     if (max !== undefined && val > max) {
       val = max;
-      displayWarning(warningMessage || `Clamped to ${max}`);
+      displayWarning(warningMessage || `Clamped to max ${max}`);
     }
     
     onChange(val);
@@ -91,14 +93,11 @@ export const InputControl: React.FC<InputControlProps> = ({
     setIsFocused(false);
     let cleanStr = localVal.replace(/,/g, '');
     if (cleanStr === '' || isNaN(parseFloat(cleanStr))) {
-      onChange(min);
-      setLocalVal(formatIndianComma(min));
+      onChange(0);
+      setLocalVal(formatIndianComma(0));
     } else {
       let finalVal = parseFloat(cleanStr);
-      if (finalVal < min) {
-        onChange(min);
-        setLocalVal(formatIndianComma(min));
-      } else if (max !== undefined && finalVal > max) {
+      if (max !== undefined && finalVal > max) {
          onChange(max);
          setLocalVal(formatIndianComma(max));
       } else {
@@ -142,6 +141,17 @@ export const InputControl: React.FC<InputControlProps> = ({
           </span>
         )}
       </div>
+      {showSlider && (
+        <input
+          type="range"
+          min={min}
+          max={max ?? Math.max(value ? value * 2 : 100000, 100)}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-[#185FA5] mt-2 block"
+        />
+      )}
       {warning && (
         <p className="text-[10px] font-semibold text-[#854F0B] dark:text-amber-400 translate-y-0.5 animate-in fade-in duration-200">
           {warning}

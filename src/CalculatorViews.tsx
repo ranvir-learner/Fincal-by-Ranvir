@@ -6,9 +6,9 @@ import { Line, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Respons
 
 export function CalculatorViews({ id, title, subtitle, onBack }: any) {
   if (['home', 'car', 'personal'].includes(id)) {
-    return <LoanCalculator type={id} title={title} subtitle={subtitle} onBack={onBack} />;
+    return <LoanCalculator key={id} type={id} title={title} subtitle={subtitle} onBack={onBack} />;
   }
-  return <InvestmentCalculator type={id} title={title} subtitle={subtitle} onBack={onBack} />;
+  return <InvestmentCalculator key={id} type={id} title={title} subtitle={subtitle} onBack={onBack} />;
 }
 
 import { useCurrency } from './lib/store';
@@ -22,11 +22,11 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
   const symbol = useCurrency();
   
   const [params, setParams] = useState({
-     principal: isHome ? 5000000 : isCar ? 800000 : 500000,
-     downPayment: isCar ? 100000 : 0, 
-     rate: isHome ? 8.5 : isCar ? 9 : 14,
-     tenure: isHome ? 20 : isCar ? 5 : 3,
-     fee: isHome ? 0.5 : isCar ? 1 : 2,
+     principal: 0,
+     downPayment: 0, 
+     rate: 0,
+     tenure: 0,
+     fee: 0,
      prepayment: 0
   });
 
@@ -102,13 +102,13 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
 function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
   const symbol = useCurrency();
   const [params, setParams] = useState({
-     invest: ['sip', 'ssy', 'ppf', 'mf'].includes(type) ? 10000 : 100000,
-     rate: type === 'ssy' ? 8.2 : type === 'ppf' ? 7.1 : type === 'fd' ? 7 : 12,
-     period: type === 'ssy' ? 21 : type === 'ppf' ? 15 : 10,
-     inflation: 6,
-     stepup: 10,
-     expense: 1, // MF
-     swpRate: 8 // SWP
+     invest: 0,
+     rate: 0,
+     period: 0,
+     inflation: 0,
+     stepup: 0,
+     expense: 0,
+     swpRate: 0
   });
   const up = (k:string, v:number) => setParams(p => ({...p, [k]: v}));
 

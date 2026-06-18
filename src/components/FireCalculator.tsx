@@ -77,13 +77,13 @@ export function FireCalculator({ onBack }: { onBack?: () => void }) {
 function FireTargetMode() {
   const symbol = useCurrency();
   const [params, setParams] = useState({
-    monthlyExpense: 50000,
-    currentAge: 30,
-    targetRetirementAge: 45,
-    inflationRate: 6,
-    postRetirementReturn: 8,
-    withdrawalPeriod: 30,
-    preRetirementReturn: 12,
+    monthlyExpense: 0,
+    currentAge: 0,
+    targetRetirementAge: 0,
+    inflationRate: 0,
+    postRetirementReturn: 0,
+    withdrawalPeriod: 0,
+    preRetirementReturn: 0,
   });
 
   const updateParam = (key: string, value: number) => {
@@ -139,13 +139,19 @@ function FireTargetMode() {
       <aside className="w-full md:w-1/3 lg:w-1/4 max-w-full md:max-w-sm bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col gap-6 md:overflow-y-auto shrink-0 z-10 transition-colors duration-300">
         <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
           <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Target Corpus Parameters</h2>
-          <InputControl label="Monthly expenses at retirement" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={1} prefix={symbol} hint="Your expected monthly spend in today's value" />
-          <InputControl label="Current age (years)" value={params.currentAge} onChange={(v) => updateParam('currentAge', v)} min={18} max={80} hint="Min: 18" />
-          <InputControl label="Target retirement age" value={params.targetRetirementAge} onChange={(v) => updateParam('targetRetirementAge', v)} min={params.currentAge + 1} max={100} hint="Must be > current age" />
-          <InputControl label="Withdrawal period (years)" value={params.withdrawalPeriod} onChange={(v) => updateParam('withdrawalPeriod', v)} min={1} max={100} hint="How many years should corpus last?" />
+          <InputControl label="Monthly expenses at retirement" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={0} prefix={symbol} hint="Your expected monthly spend in today's value" showSlider={true} max={500000} step={1000} />
+          <InputControl label="Current age (years)" value={params.currentAge} onChange={(v) => updateParam('currentAge', v)} min={0} max={80} />
+          <InputControl label="Target retirement age" value={params.targetRetirementAge} onChange={(v) => updateParam('targetRetirementAge', v)} min={0} max={100} />
+          <InputControl label="Withdrawal period (years)" value={params.withdrawalPeriod} onChange={(v) => updateParam('withdrawalPeriod', v)} min={0} max={100} hint="How many years should corpus last?" />
           <InputControl label="Expected inflation" value={params.inflationRate} onChange={(v) => updateParam('inflationRate', v)} min={0} max={30} step={0.1} suffix="%" hint="Max: 30%" />
           <InputControl label="Post-retirement return" value={params.postRetirementReturn} onChange={(v) => updateParam('postRetirementReturn', v)} min={0} max={100} step={0.1} suffix="%" hint="Expected return on corpus after retirement" />
           <InputControl label="Pre-retirement return" value={params.preRetirementReturn} onChange={(v) => updateParam('preRetirementReturn', v)} min={0} max={100} step={0.1} suffix="%" hint="Expected return while investing" />
+        </div>
+        <div className="mt-2 p-4 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-100 dark:border-sky-800/50">
+          <h3 className="text-xs font-bold text-sky-800 dark:text-sky-300 mb-2">How is this calculated?</h3>
+          <p className="text-[11px] text-sky-700 dark:text-sky-400 leading-relaxed">
+            Your monthly expenses are adjusted for inflation up to your target retirement age. The required corpus is calculated using the time value of money to sustain your inflated expenses throughout your withdrawal period, assuming the post-retirement return rate.
+          </p>
         </div>
       </aside>
       <section className="flex-1 flex flex-col p-4 md:p-8 gap-6 md:gap-8 md:overflow-y-auto w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -181,20 +187,15 @@ function FireTargetMode() {
 function FireReadinessMode() {
   const symbol = useCurrency();
   const [params, setParams] = useState({
-    currentCorpus: 10000000,
-    monthlyExpense: 50000,
-    returnRate: 8,
-    inflationRate: 6,
+    currentCorpus: 0,
+    monthlyExpense: 0,
+    returnRate: 0,
+    inflationRate: 0,
   });
 
   const updateParam = (key: string, value: number) => {
     setParams(p => ({ ...p, [key]: value }));
   };
-
-  const safeWithdrawalCorpus = (params.monthlyExpense * 12) / 0.04;
-  const isFireReady = params.currentCorpus >= safeWithdrawalCorpus;
-  const shortfallSurplus = params.currentCorpus - safeWithdrawalCorpus;
-  const safeSpend = (params.currentCorpus * 0.04) / 12;
 
   const { yearData, lastsYears } = useMemo(() => {
     let corpus = params.currentCorpus;
@@ -202,9 +203,15 @@ function FireReadinessMode() {
     let years = 0;
     const data = [{ year: 0, corpus, expense: annualExpense/12 }];
 
+    if (corpus <= 0 && annualExpense <= 0) return { yearData: data, lastsYears: 0 };
+
     while (corpus > 0 && years < 100) {
-      corpus = corpus * (1 + params.returnRate / 100) - annualExpense;
-      annualExpense = annualExpense * (1 + params.inflationRate / 100);
+      if (annualExpense > 0) {
+         corpus = corpus * (1 + params.returnRate / 100) - annualExpense;
+         annualExpense = annualExpense * (1 + params.inflationRate / 100);
+      } else {
+         corpus = corpus * (1 + params.returnRate / 100);
+      }
       years++;
       data.push({ year: years, corpus: Math.max(0, corpus), expense: annualExpense/12 });
     }
@@ -212,29 +219,35 @@ function FireReadinessMode() {
   }, [params.currentCorpus, params.monthlyExpense, params.returnRate, params.inflationRate]);
 
   const chartData = yearData;
-  const safeWithdrawalRate = ((params.monthlyExpense * 12) / Math.max(1, params.currentCorpus)) * 100;
+  const safeWithdrawalRate = params.currentCorpus > 0 ? ((params.monthlyExpense * 12) / params.currentCorpus) * 100 : 0;
+  const isFireReady = lastsYears >= 40;
 
   return (
     <div className="flex-1 flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden relative">
       <aside className="w-full md:w-1/3 lg:w-1/4 max-w-full md:max-w-sm bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col gap-6 md:overflow-y-auto shrink-0 z-10 transition-colors duration-300">
         <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
           <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Readiness Parameters</h2>
-          <InputControl label="Current corpus / savings" value={params.currentCorpus} onChange={(v) => updateParam('currentCorpus', v)} min={1} prefix={symbol} hint="Total investable savings today" />
-          <InputControl label="Monthly expenses" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={1} prefix={symbol} hint="Expected monthly spend in retirement" />
+          <InputControl label="Current corpus / savings" value={params.currentCorpus} onChange={(v) => updateParam('currentCorpus', v)} min={0} prefix={symbol} hint="Total investable savings today" />
+          <InputControl label="Monthly expenses" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={0} prefix={symbol} hint="Expected monthly spend in retirement" showSlider={true} max={500000} step={1000} />
           <InputControl label="Expected return on corpus" value={params.returnRate} onChange={(v) => updateParam('returnRate', v)} min={0} max={100} step={0.1} suffix="%" hint="Return on invested corpus" />
           <InputControl label="Expected inflation" value={params.inflationRate} onChange={(v) => updateParam('inflationRate', v)} min={0} max={30} step={0.1} suffix="%" hint="Max: 30%" />
+        </div>
+        <div className="mt-2 p-4 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-100 dark:border-sky-800/50">
+          <h3 className="text-xs font-bold text-sky-800 dark:text-sky-300 mb-2">How is this calculated?</h3>
+          <p className="text-[11px] text-sky-700 dark:text-sky-400 leading-relaxed">
+            We simulate the depletion of your corpus year by year, deducting the annual expense (growing by inflation) and adding the expected return. 
+            If your corpus outlasts 40 years, you are considered FIRE ready.
+          </p>
         </div>
       </aside>
       <section className="flex-1 flex flex-col p-4 md:p-8 gap-6 md:gap-8 md:overflow-y-auto w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
         <div className={`w-full p-4 rounded-xl shadow-sm text-center font-semibold text-white ${isFireReady ? 'bg-[#3B6D11]' : 'bg-[#E24B4A]'}`}>
-            {isFireReady ? `You can retire now. Your corpus sustains withdrawals for ${lastsYears > 99 ? '100+' : lastsYears} years.` : `Not yet. You need ${formatINR(-shortfallSurplus)} more to retire safely.`}
+            {isFireReady ? `You can retire now. Your corpus sustains withdrawals for ${lastsYears > 99 ? '100+' : lastsYears} years.` : `Not yet. Your corpus depletes in ${lastsYears} years due to inflation/returns. Target is 40+ years.`}
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-            <SummaryCard title="Corpus Lasts" value={`${lastsYears > 99 ? '100+' : lastsYears} years`} valueClass={lastsYears > 30 ? 'text-[#3B6D11] dark:text-[#4ADE80]' : lastsYears > 15 ? 'text-[#854F0B] dark:text-amber-400' : 'text-[#E24B4A] dark:text-rose-400'} />
-            <SummaryCard title="Safe Withdrawal Rate" value={`${safeWithdrawalRate.toFixed(2)}%`} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            <SummaryCard title="Corpus Lasts" value={`${lastsYears > 99 ? '100+' : lastsYears} years`} valueClass={lastsYears >= 40 ? 'text-[#3B6D11] dark:text-[#4ADE80]' : lastsYears >= 20 ? 'text-[#854F0B] dark:text-amber-400' : 'text-[#E24B4A] dark:text-rose-400'} />
+            <SummaryCard title="Actual Withdrawal Rate" value={`${safeWithdrawalRate.toFixed(2)}%`} />
             <SummaryCard title="FIRE Ready?" value={isFireReady ? 'YES' : 'NOT YET'} valueClass={isFireReady ? 'text-[#3B6D11] dark:text-[#4ADE80]' : 'text-[#E24B4A] dark:text-rose-400'} />
-            <SummaryCard title={isFireReady ? 'Surplus' : 'Shortfall'} value={formatINR(Math.abs(shortfallSurplus))} valueClass={isFireReady ? 'text-[#3B6D11] dark:text-[#4ADE80]' : 'text-[#E24B4A] dark:text-rose-400'} />
-            <SummaryCard title="Monthly Sustainable Spend" value={formatINR(safeSpend)} />
             <SummaryCard title="Corpus at Year 10" value={formatINR(yearData[10]?.corpus || 0)} />
         </div>
         <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl p-4 md:p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col min-h-96 transition-colors duration-300">
@@ -257,15 +270,15 @@ function FireReadinessMode() {
 function FireDateMode() {
   const symbol = useCurrency();
   const [params, setParams] = useState({
-    currentAge: 28,
-    currentSavings: 500000,
-    monthlySIP: 25000,
-    stepUpRate: 10,
-    preRetirementReturn: 12,
-    postRetirementReturn: 8,
-    monthlyExpense: 75000,
-    inflationRate: 6,
-    withdrawalPeriod: 30
+    currentAge: 0,
+    currentSavings: 0,
+    monthlySIP: 0,
+    stepUpRate: 0,
+    preRetirementReturn: 0,
+    postRetirementReturn: 0,
+    monthlyExpense: 0,
+    inflationRate: 0,
+    withdrawalPeriod: 0
   });
 
   const updateParam = (key: string, value: number) => {
@@ -335,15 +348,21 @@ function FireDateMode() {
       <aside className="w-full md:w-1/3 lg:w-1/4 max-w-full md:max-w-sm bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col gap-6 md:overflow-y-auto shrink-0 z-10 transition-colors duration-300">
         <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
           <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">FIRE Date Parameters</h2>
-          <InputControl label="Current age" value={params.currentAge} onChange={(v) => updateParam('currentAge', v)} min={18} max={80} />
+          <InputControl label="Current age" value={params.currentAge} onChange={(v) => updateParam('currentAge', v)} min={0} max={80} />
           <InputControl label="Current savings / corpus" value={params.currentSavings} onChange={(v) => updateParam('currentSavings', v)} min={0} prefix={symbol} hint="Existing investable savings" />
-          <InputControl label="Monthly SIP" value={params.monthlySIP} onChange={(v) => updateParam('monthlySIP', v)} min={1} prefix={symbol} hint={`Min: ${symbol}1 · No upper limit`} />
+          <InputControl label="Monthly SIP" value={params.monthlySIP} onChange={(v) => updateParam('monthlySIP', v)} min={0} prefix={symbol} hint={`No upper limit`} />
           <InputControl label="Annual step-up" value={params.stepUpRate} onChange={(v) => updateParam('stepUpRate', v)} min={0} max={100} step={1} suffix="%" />
           <InputControl label="Pre-retirement return" value={params.preRetirementReturn} onChange={(v) => updateParam('preRetirementReturn', v)} min={0} max={100} step={0.1} suffix="%" hint="Max: 100%" />
           <InputControl label="Post-retirement return" value={params.postRetirementReturn} onChange={(v) => updateParam('postRetirementReturn', v)} min={0} max={100} step={0.1} suffix="%" />
-          <InputControl label="Monthly expenses at retirement" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={1} prefix={symbol} hint="In today's value" />
+          <InputControl label="Monthly expenses at retirement" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={0} prefix={symbol} hint="In today's value" showSlider={true} max={500000} step={1000} />
           <InputControl label="Inflation" value={params.inflationRate} onChange={(v) => updateParam('inflationRate', v)} min={0} max={30} step={0.1} suffix="%" hint="Max: 30%" />
-          <InputControl label="Withdrawal period" value={params.withdrawalPeriod} onChange={(v) => updateParam('withdrawalPeriod', v)} min={1} max={100} />
+          <InputControl label="Withdrawal period" value={params.withdrawalPeriod} onChange={(v) => updateParam('withdrawalPeriod', v)} min={0} max={100} />
+        </div>
+        <div className="mt-2 p-4 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-100 dark:border-sky-800/50">
+          <h3 className="text-xs font-bold text-sky-800 dark:text-sky-300 mb-2">How is this calculated?</h3>
+          <p className="text-[11px] text-sky-700 dark:text-sky-400 leading-relaxed">
+            We simulate your wealth accumulation year over year (current savings + monthly SIPs with step-ups compounding at the pre-retirement return). Each year, we also calculate the required corpus needed to sustain your inflated expenses. The year your accumulated wealth crosses the required corpus is your FIRE date.
+          </p>
         </div>
       </aside>
       <section className="flex-1 flex flex-col p-4 md:p-8 gap-6 md:gap-8 md:overflow-y-auto w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
