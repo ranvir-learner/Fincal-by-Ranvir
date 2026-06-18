@@ -1,9 +1,11 @@
-import React from 'react';
-import { Home } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, HelpCircle } from 'lucide-react';
 import { useCurrency } from '../lib/store';
+import { InfoModal } from './InfoModal';
 
-export function CalculatorLayout({ title, subtitle, onBack, inputs, outputs, chart, table }: any) {
+export function CalculatorLayout({ title, subtitle, onBack, inputs, outputs, chart, table, infoContent }: any) {
   const symbol = useCurrency();
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
   return (
     <div className="flex flex-col h-[100dvh] bg-[#f8f9fa] dark:bg-slate-950 md:bg-white md:dark:bg-slate-900 text-[#1a1a2e] dark:text-slate-100 w-full transition-colors duration-300">
       <header className="flex items-center gap-3 p-4 border-b border-black/10 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900 transition-colors duration-300">
@@ -16,9 +18,18 @@ export function CalculatorLayout({ title, subtitle, onBack, inputs, outputs, cha
           </div>
         </button>
         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-        <div className="flex-1 ml-2">
-          <h2 className="text-lg sm:text-xl font-bold truncate tracking-tight text-slate-800 dark:text-slate-100">{title}</h2>
-          {subtitle && <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">{subtitle}</p>}
+        <div className="flex-1 ml-2 flex items-center gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-bold truncate tracking-tight text-slate-800 dark:text-slate-100">{title}</h2>
+              {infoContent && (
+                <button onClick={() => setIsInfoOpen(true)} className="text-slate-400 hover:text-sky-500 transition-colors p-1" title="How represents this calculation?">
+                  <HelpCircle size={18} />
+                </button>
+              )}
+            </div>
+            {subtitle && <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">{subtitle}</p>}
+          </div>
         </div>
       </header>
       
@@ -45,6 +56,13 @@ export function CalculatorLayout({ title, subtitle, onBack, inputs, outputs, cha
           )}
         </section>
       </div>
+
+      <InfoModal 
+        isOpen={isInfoOpen} 
+        onClose={() => setIsInfoOpen(false)} 
+        title={`${title} - How it works`} 
+        content={infoContent} 
+      />
     </div>
   );
 }

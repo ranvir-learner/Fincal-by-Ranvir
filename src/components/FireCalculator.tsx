@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Home } from 'lucide-react';
+import { Home, HelpCircle } from 'lucide-react';
 import { InputControl } from './InputControl';
 import { formatINR } from '../lib/utils';
 import { useCurrency } from '../lib/store';
+import { InfoModal } from './InfoModal';
 import {
   ComposedChart,
   Bar,
@@ -21,7 +22,7 @@ export function FireCalculator({ onBack }: { onBack?: () => void }) {
   const [mode, setMode] = useState<'target' | 'readiness' | 'date'>('target');
 
   return (
-    <div className="flex-1 flex flex-col items-start w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
+    <div className="flex-1 flex items-start w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300 flex-col">
       <div className="w-full flex items-center justify-start gap-3 p-4 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-colors duration-300">
         {onBack && (
            <button onClick={onBack} className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-[#185FA5] dark:hover:text-[#4299E1] mr-2 shrink-0 transition-colors group">
@@ -74,8 +75,22 @@ export function FireCalculator({ onBack }: { onBack?: () => void }) {
   );
 }
 
+function FireTargetInfo() {
+  return (
+    <div className="space-y-3">
+      <p>This calculator determines the required corpus you need at the time of your retirement to sustain your lifestyle.</p>
+      <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs overflow-x-auto space-y-2 text-slate-700 dark:text-slate-300">
+        <p><strong className="text-sky-600 dark:text-sky-400">1. Expense at Retirement</strong> = Current Expense × (1 + Inflation)^Years To Retirement</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">2. Required Corpus</strong> (using Present Value formula): Calculates how much money is needed to pay out inflated annual expenses for the specified <i>withdrawal period</i>, assuming the remaining balance grows at the <i>post-retirement return</i> rate and shrinks by inflation.</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">3. Required SIP</strong> = Calculated via Future Value of an Annuity formula to reach the required corpus from zero by retirement age.</p>
+      </div>
+    </div>
+  );
+}
+
 function FireTargetMode() {
   const symbol = useCurrency();
+  const [infoOpen, setInfoOpen] = useState(false);
   const [params, setParams] = useState({
     monthlyExpense: 0,
     currentAge: 0,
@@ -138,7 +153,12 @@ function FireTargetMode() {
     <div className="flex-1 flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden relative">
       <aside className="w-full md:w-1/3 lg:w-1/4 max-w-full md:max-w-sm bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col gap-6 md:overflow-y-auto shrink-0 z-10 transition-colors duration-300">
         <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
-          <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Target Corpus Parameters</h2>
+          <div className="flex items-center justify-between col-span-2 md:col-span-1 mb-2">
+            <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Corpus Parameters</h2>
+            <button onClick={() => setInfoOpen(true)} className="text-slate-400 hover:text-sky-500 transition-colors">
+              <HelpCircle size={16} />
+            </button>
+          </div>
           <InputControl label="Monthly expenses at retirement" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={0} prefix={symbol} hint="Your expected monthly spend in today's value" showSlider={true} max={500000} step={1000} />
           <InputControl label="Current age (years)" value={params.currentAge} onChange={(v) => updateParam('currentAge', v)} min={0} max={80} />
           <InputControl label="Target retirement age" value={params.targetRetirementAge} onChange={(v) => updateParam('targetRetirementAge', v)} min={0} max={100} />
@@ -180,12 +200,28 @@ function FireTargetMode() {
           </ResponsiveContainer>
         </div>
       </section>
+      <InfoModal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="Target Corpus - How it works" content={<FireTargetInfo />} />
+    </div>
+  );
+}
+
+function FireReadinessInfo() {
+  return (
+    <div className="space-y-3">
+      <p>This calculator determines if your current corpus is sufficient to retire safely right now.</p>
+      <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs overflow-x-auto space-y-2 text-slate-700 dark:text-slate-300">
+        <p><strong className="text-sky-600 dark:text-sky-400">Depletion Simulation:</strong> We simulate the year-to-year balance of your corpus for up to 100 years.</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">1. Adjust Expenses:</strong> Annual expenses increase by the inflation rate each year.</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">2. Adjust Corpus:</strong> The remaining corpus grows by the expected return rate each year, subtracting the year's expenses.</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">3. Readiness Check:</strong> If the simulation shows your corpus lasting &ge; 40 years, you're considered FIRE Ready.</p>
+      </div>
     </div>
   );
 }
 
 function FireReadinessMode() {
   const symbol = useCurrency();
+  const [infoOpen, setInfoOpen] = useState(false);
   const [params, setParams] = useState({
     currentCorpus: 0,
     monthlyExpense: 0,
@@ -226,7 +262,12 @@ function FireReadinessMode() {
     <div className="flex-1 flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden relative">
       <aside className="w-full md:w-1/3 lg:w-1/4 max-w-full md:max-w-sm bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col gap-6 md:overflow-y-auto shrink-0 z-10 transition-colors duration-300">
         <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
-          <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Readiness Parameters</h2>
+          <div className="flex items-center justify-between col-span-2 md:col-span-1 mb-2">
+            <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Readiness Parameters</h2>
+            <button onClick={() => setInfoOpen(true)} className="text-slate-400 hover:text-sky-500 transition-colors">
+              <HelpCircle size={16} />
+            </button>
+          </div>
           <InputControl label="Current corpus / savings" value={params.currentCorpus} onChange={(v) => updateParam('currentCorpus', v)} min={0} prefix={symbol} hint="Total investable savings today" />
           <InputControl label="Monthly expenses" value={params.monthlyExpense} onChange={(v) => updateParam('monthlyExpense', v)} min={0} prefix={symbol} hint="Expected monthly spend in retirement" showSlider={true} max={500000} step={1000} />
           <InputControl label="Expected return on corpus" value={params.returnRate} onChange={(v) => updateParam('returnRate', v)} min={0} max={100} step={0.1} suffix="%" hint="Return on invested corpus" />
@@ -263,12 +304,28 @@ function FireReadinessMode() {
           </ResponsiveContainer>
         </div>
       </section>
+      <InfoModal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="FIRE Readiness - How it works" content={<FireReadinessInfo />} />
+    </div>
+  );
+}
+
+function FireDateInfo() {
+  return (
+    <div className="space-y-3">
+      <p>This calculator predicts the exact year and age when you will be able to retire, based on your current savings and ongoing SIPs.</p>
+      
+      <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs overflow-x-auto space-y-2 text-slate-700 dark:text-slate-300">
+        <p><strong className="text-sky-600 dark:text-sky-400">1. Wealth Accumulation:</strong> Simulates your growing corpus year by year using <i>Current Savings + (Monthly SIP × Step-Up)</i> compounding at the <i>Pre-Retirement Return</i>.</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">2. Required Corpus:</strong> Simultaneously calculates the corpus you would need *in that specific year*, based on inflated expenses from today to that year.</p>
+        <p><strong className="text-sky-600 dark:text-sky-400">3. Intersection:</strong> Your "FIRE Date" is the first year where your accumulated wealth line crosses above your required corpus line.</p>
+      </div>
     </div>
   );
 }
 
 function FireDateMode() {
   const symbol = useCurrency();
+  const [infoOpen, setInfoOpen] = useState(false);
   const [params, setParams] = useState({
     currentAge: 0,
     currentSavings: 0,
@@ -347,7 +404,12 @@ function FireDateMode() {
     <div className="flex-1 flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden relative">
       <aside className="w-full md:w-1/3 lg:w-1/4 max-w-full md:max-w-sm bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col gap-6 md:overflow-y-auto shrink-0 z-10 transition-colors duration-300">
         <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
-          <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">FIRE Date Parameters</h2>
+          <div className="flex items-center justify-between col-span-2 md:col-span-1 mb-2">
+            <h2 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">FIRE Date Parameters</h2>
+            <button onClick={() => setInfoOpen(true)} className="text-slate-400 hover:text-sky-500 transition-colors">
+              <HelpCircle size={16} />
+            </button>
+          </div>
           <InputControl label="Current age" value={params.currentAge} onChange={(v) => updateParam('currentAge', v)} min={0} max={80} />
           <InputControl label="Current savings / corpus" value={params.currentSavings} onChange={(v) => updateParam('currentSavings', v)} min={0} prefix={symbol} hint="Existing investable savings" />
           <InputControl label="Monthly SIP" value={params.monthlySIP} onChange={(v) => updateParam('monthlySIP', v)} min={0} prefix={symbol} hint={`No upper limit`} />
@@ -391,6 +453,7 @@ function FireDateMode() {
           </ResponsiveContainer>
         </div>
       </section>
+      <InfoModal isOpen={infoOpen} onClose={() => setInfoOpen(false)} title="FIRE Date - How it works" content={<FireDateInfo />} />
     </div>
   );
 }

@@ -14,6 +14,33 @@ export function CalculatorViews({ id, title, subtitle, onBack }: any) {
 import { useCurrency } from './lib/store';
 
 // -----------------------------------------
+// INFORMATION CONTENT HELPERS
+// -----------------------------------------
+function getLoanInfo(type: string) {
+  return (
+    <div className="space-y-3">
+      <p>This calculator determines your equated monthly installment (EMI), total interest payable, and the effective annual percentage rate (APR) considering processing fees.</p>
+      
+      <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs overflow-x-auto">
+        <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">EMI Formula:</p>
+        <p className="text-sky-600 dark:text-sky-400">E = {`P \u00D7 r \u00D7 (1 + r)^n / ((1 + r)^n - 1)`}</p>
+      </div>
+      
+      <ul className="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
+        <li><strong>E</strong> is the EMI amount</li>
+        <li><strong>P</strong> is the Principal Loan Amount (after down payment, if any)</li>
+        <li><strong>r</strong> is the monthly interest rate (annual rate / 12 / 100)</li>
+        <li><strong>n</strong> is the loan tenure in months</li>
+      </ul>
+
+      <p>The <strong>Amortization Schedule</strong> calculates the interest on the outstanding principal month by month. The rest of your EMI pays down the principal.</p>
+      
+      <p><strong>Effective APR</strong> calculates the true cost of the loan including the processing fee, expressed as an annual rate.</p>
+    </div>
+  );
+}
+
+// -----------------------------------------
 // LOAN CALCULATOR ENGINE
 // -----------------------------------------
 function LoanCalculator({ type, title, subtitle, onBack }: any) {
@@ -93,7 +120,70 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
     </ResponsiveContainer>
   );
 
-  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} />;
+  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} infoContent={getLoanInfo(type)} />;
+}
+
+function getInvestmentInfo(type: string) {
+  const isSIP = ['sip', 'mf'].includes(type);
+  const isLump = ['lumpsum', 'fd'].includes(type);
+  const isSWP = type === 'swp';
+  const isGov = ['ppf', 'ssy'].includes(type);
+  
+  return (
+    <div className="space-y-3">
+      <p>This calculator projects the future value of your investments over time, accounting for compounding returns.</p>
+      
+      {isSIP && (
+        <>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs overflow-x-auto">
+             <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">SIP Future Value Formula (Approx):</p>
+             <p className="text-sky-600 dark:text-sky-400">FV = {`P \u00D7 [((1 + r)^n - 1) / r] \u00D7 (1 + r)`}</p>
+          </div>
+          <ul className="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
+            <li><strong>P</strong> is the monthly investment amount</li>
+            <li><strong>r</strong> is the monthly rate of return (annual rate / 12 / 100)</li>
+            <li><strong>n</strong> is the total number of periods (months)</li>
+          </ul>
+          <p className="text-sm mt-2"><b>Step-up SIP:</b> The investment amount increases annually by the step-up percentage.</p>
+          {type === 'mf' && <p className="text-sm"><b>Expense Ratio:</b> Deducted from the annual expected return to compute the net rate of return.</p>}
+        </>
+      )}
+
+      {isLump && (
+        <>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs overflow-x-auto">
+             <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Compound Interest Formula:</p>
+             <p className="text-sky-600 dark:text-sky-400">A = {`P \u00D7 (1 + r)^t`}</p>
+          </div>
+          <ul className="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
+            <li><strong>P</strong> is the initial lumpsum amount</li>
+            <li><strong>r</strong> is the annual interest rate</li>
+            <li><strong>t</strong> is the time in years</li>
+          </ul>
+        </>
+      )}
+
+      {isSWP && (
+        <div className="text-sm space-y-2">
+           <p><strong>Systematic Withdrawal Plan (SWP)</strong> simulates monthly withdrawals from an initial corpus.</p>
+           <p>Each month, your corpus grows by the expected return rate, and then the withdrawal amount is deducted. This repeats until the corpus is depleted or the time period ends.</p>
+        </div>
+      )}
+
+      {isGov && (
+        <div className="text-sm space-y-2">
+           <p>For schemes like PPF or SSY, the principal is typically invested annually and interest is compounded annually at the specified rate.</p>
+           {type === 'ssy' && <p><b>SSY Rule:</b> Contributions are made only for the first 15 years, and interest continues to compound until maturity (21 years usually, though shown proportionally here).</p>}
+        </div>
+      )}
+
+      {['sip', 'lumpsum', 'mf'].includes(type) && (
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <p className="text-sm"><strong>Inflation Adjusted Value:</strong> Indicates the "real" purchasing power of the final corpus in today's terms. Formula: <code>Real Value = Final Corpus / (1 + InflationRate)^Years</code>.</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // -----------------------------------------
@@ -189,5 +279,6 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
     </ResponsiveContainer>
   );
 
-  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} />;
+  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} infoContent={getInvestmentInfo(type)} />;
 }
+
