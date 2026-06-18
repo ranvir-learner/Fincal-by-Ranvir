@@ -23,7 +23,7 @@ export function CalculatorLayout({ title, subtitle, onBack, inputs, outputs, cha
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold truncate tracking-tight text-slate-800 dark:text-slate-100">{title}</h2>
               {infoContent && (
-                <button onClick={() => setIsInfoOpen(true)} className="text-slate-400 hover:text-sky-500 transition-colors p-1" title="How represents this calculation?">
+                <button onClick={() => setIsInfoOpen(true)} className="text-slate-400 hover:text-sky-500 transition-colors p-1" title="How does this calculation work?">
                   <HelpCircle size={18} />
                 </button>
               )}

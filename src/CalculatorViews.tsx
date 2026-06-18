@@ -12,6 +12,7 @@ export function CalculatorViews({ id, title, subtitle, onBack }: any) {
 }
 
 import { useCurrency } from './lib/store';
+import { useLocalStorage } from './lib/utils';
 
 // -----------------------------------------
 // INFORMATION CONTENT HELPERS
@@ -48,14 +49,21 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
   const isCar = type === 'car';
   const symbol = useCurrency();
   
-  const [params, setParams] = useState({
-     principal: 0,
-     downPayment: 0, 
-     rate: 0,
-     tenure: 0,
-     fee: 0,
-     prepayment: 0
-  });
+  const [params, setParams] = useLocalStorage(`calc_params_${type}`, (() => {
+     let p = 500000, t = 5, r = 10, d = 0;
+     if (type === 'home') { p = 5000000; t = 20; r = 8.5; d = 1000000; }
+     else if (type === 'car') { p = 800000; t = 5; r = 9.5; d = 100000; }
+     else if (type === 'personal') { p = 300000; t = 3; r = 12; }
+     else if (type === 'business') { p = 2000000; t = 5; r = 15; }
+     return {
+       principal: p,
+       downPayment: d, 
+       rate: r,
+       tenure: t,
+       fee: 1,
+       prepayment: 0
+     };
+  })());
 
   const up = (k:string, v:number) => setParams(p => ({...p, [k]: v}));
   
@@ -127,7 +135,7 @@ function getInvestmentInfo(type: string) {
   const isSIP = ['sip', 'mf'].includes(type);
   const isLump = ['lumpsum', 'fd'].includes(type);
   const isSWP = type === 'swp';
-  const isGov = ['ppf', 'ssy'].includes(type);
+  const isGov = type === 'ppf';
   
   return (
     <div className="space-y-3">
@@ -172,8 +180,7 @@ function getInvestmentInfo(type: string) {
 
       {isGov && (
         <div className="text-sm space-y-2">
-           <p>For schemes like PPF or SSY, the principal is typically invested annually and interest is compounded annually at the specified rate.</p>
-           {type === 'ssy' && <p><b>SSY Rule:</b> Contributions are made only for the first 15 years, and interest continues to compound until maturity (21 years usually, though shown proportionally here).</p>}
+           <p>For schemes like PPF, the principal is typically invested annually and interest is compounded annually at the specified rate.</p>
         </div>
       )}
 
@@ -191,15 +198,25 @@ function getInvestmentInfo(type: string) {
 // -----------------------------------------
 function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
   const symbol = useCurrency();
-  const [params, setParams] = useState({
-     invest: 0,
-     rate: 0,
-     period: 0,
-     inflation: 0,
-     stepup: 0,
-     expense: 0,
-     swpRate: 0
-  });
+  const [params, setParams] = useLocalStorage(`calc_params_${type}`, (() => {
+     let i = 10000, r = 12, p = 10, swp = 10000;
+     if (type === 'lumpsum') { i = 100000; r = 12; p = 10; }
+     else if (type === 'fd') { i = 100000; r = 7; p = 5; }
+     else if (type === 'ppf') { i = 150000; r = 7.1; p = 15; }
+     else if (type === 'swp') { i = 5000000; r = 10; p = 20; swp = 30000; }
+     else if (type === 'sip') { i = 10000; r = 12; p = 15; }
+     else if (type === 'mf') { i = 10000; r = 12; p = 15; }
+     
+     return {
+       invest: i,
+       rate: r,
+       period: p,
+       inflation: 6,
+       stepup: 10,
+       expense: 1,
+       swpRate: swp
+     };
+  })());
   const up = (k:string, v:number) => setParams(p => ({...p, [k]: v}));
 
   const { chartData, totals } = useMemo(() => {
@@ -219,20 +236,21 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
         if (params.stepup > 0) curSip *= (1 + params.stepup/100);
       } else if (type === 'lumpsum' || type === 'fd') {
         corp = corp * Math.pow(1 + params.rate/100, 1);
-      } else if (type === 'ppf' || type === 'ssy') {
-        if (type === 'ppf' || (type === 'ssy' && y <= 15)) {
-          inv += params.invest;
-          corp = (corp + params.invest) * (1 + params.rate/100);
-        } else {
-          corp = corp * (1 + params.rate/100);
-        }
+      } else if (type === 'ppf') {
+        inv += params.invest;
+        corp = (corp + params.invest) * (1 + params.rate/100);
       } else if (type === 'swp') {
-        for (let m=0; m<12; m++) { corp = corp*(1 + params.rate/100/12) - params.swpRate; }
+        for (let m=0; m<12; m++) { 
+           if (corp > 0) {
+             corp = corp*(1 + params.rate/100/12) - params.swpRate; 
+           }
+        }
         if (corp < 0) corp = 0;
       }
       
-      const real = corp / Math.pow(1 + params.inflation/100, y);
-      data.push({ year: y, inv, corp: Math.max(0, corp), real: Math.max(0, real) });
+      const real = Math.max(0, corp / Math.pow(1 + params.inflation/100, y));
+      const returns = Math.max(0, corp - inv);
+      data.push({ year: y, inv, corp: Math.max(0, corp), returns, real });
     }
 
     return { chartData: data, totals: { inv, corp } };
@@ -241,10 +259,10 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
   const inputs = (
     <>
       <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Parameters</h2>
-      <InputControl label={type === 'swp' ? `Initial Corpus (${symbol})` : type === 'lumpsum' || type === 'fd' ? `Lumpsum (${symbol})` : type === 'ppf' || type === 'ssy' ? `Yearly Invest (${symbol})` : `Monthly Invest (${symbol})`} value={params.invest} onChange={(v) => up('invest', v)} min={0} prefix={symbol} />
+      <InputControl label={type === 'swp' ? `Initial Corpus (${symbol})` : type === 'lumpsum' || type === 'fd' ? `Lumpsum (${symbol})` : type === 'ppf' ? `Yearly Invest (${symbol})` : `Monthly Invest (${symbol})`} value={params.invest} onChange={(v) => up('invest', v)} min={0} prefix={symbol} />
       {type === 'swp' && <InputControl label={`Monthly Withdrawal (${symbol})`} value={params.swpRate} onChange={(v) => up('swpRate', v)} min={1} prefix={symbol} />}
       <InputControl label="Expected Return" value={params.rate} onChange={(v) => up('rate', v)} min={0} max={100} step={0.1} suffix="%" />
-      {type !== 'ssy' && <InputControl label="Time Period (Years)" value={params.period} onChange={(v) => up('period', v)} min={1} max={100} />}
+      <InputControl label="Time Period (Years)" value={params.period} onChange={(v) => up('period', v)} min={1} max={100} />
       {['sip', 'lumpsum', 'mf'].includes(type) && <InputControl label="Inflation Rate" value={params.inflation} onChange={(v) => up('inflation', v)} min={0} max={30} step={0.1} suffix="%" />}
       {['sip', 'mf'].includes(type) && <InputControl label="Annual Step-up" value={params.stepup} onChange={(v) => up('stepup', v)} min={0} max={100} step={1} suffix="%" />}
       {type === 'mf' && <InputControl label="Expense Ratio" value={params.expense} onChange={(v) => up('expense', v)} min={0} max={5} step={0.1} suffix="%" />}
@@ -273,8 +291,14 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
         <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `Yr ${v}`} />
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => fi(v).replace(symbol,'')} />
         <Tooltip cursor={{ fill: "#f8fafc" }} formatter={(v: number) => fi(v)} labelFormatter={(l) => `Year ${l}`} />
-        <Bar dataKey="inv" name="Invested" fill="#185FA5" stackId="a" />
-        <Bar dataKey="corp" name="Returns" fill="#3B6D11" stackId="a" />
+        {type === 'swp' ? (
+          <Bar dataKey="corp" name="Remaining Corpus" fill="#185FA5" radius={[2, 2, 0, 0]} />
+        ) : (
+          <>
+            <Bar dataKey="inv" name="Invested" fill="#185FA5" stackId="a" />
+            <Bar dataKey="returns" name="Returns" fill="#3B6D11" stackId="a" radius={[2, 2, 0, 0]} />
+          </>
+        )}
       </ComposedChart>
     </ResponsiveContainer>
   );

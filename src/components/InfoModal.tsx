@@ -18,7 +18,7 @@ export function InfoModal({ isOpen, onClose, title, content }: { isOpen: boolean
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h2>
         </div>
 
-        <div className="text-sm text-slate-600 dark:text-slate-300 prose dark:prose-invert max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div className="text-sm text-slate-600 dark:text-slate-300 prose dark:prose-invert max-h-[70vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full pr-2">
           {content}
         </div>
       </div>

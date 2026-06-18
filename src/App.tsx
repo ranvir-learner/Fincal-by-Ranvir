@@ -10,7 +10,13 @@ const CALCULATORS = [
   { id: 'lumpsum', category: 'Investment Calculators', name: 'Lumpsum Calculator', desc: 'Calculate returns for lump sum investments to achieve your financial goals', icon: <PiggyBank size={24} className="text-[#185FA5]" /> },
   { id: 'swp', category: 'Investment Calculators', name: 'SWP Calculator', desc: 'Calculate your final amount with Systematic Withdrawal Plans', icon: <Briefcase size={24} className="text-[#185FA5]" /> },
   { id: 'mf', category: 'Investment Calculators', name: 'MF Returns Calculator', desc: 'Calculate the returns on your mutual fund investments', icon: <TrendingUp size={24} className="text-[#185FA5]" /> },
-  { id: 'fire', category: 'Investment Calculators', name: 'FIRE Calculator', desc: 'Find your Financial Independence number and plan early retirement', icon: <LandmarkIcon size={24} className="text-[#185FA5]" /> },
+  { id: 'fd', category: 'Investment Calculators', name: 'FD Calculator', desc: 'Calculate the returns on your fixed deposits', icon: <PiggyBank size={24} className="text-[#185FA5]" /> },
+  { id: 'ppf', category: 'Investment Calculators', name: 'PPF Calculator', desc: 'Calculate the returns on Public Provident Fund', icon: <LandmarkIcon size={24} className="text-[#185FA5]" /> },
+  
+  { id: 'fire-target', category: 'Retirement & Generational Wealth', name: 'FIRE Calculator', desc: 'Find your Financial Independence number and how much corpus you need', icon: <LandmarkIcon size={24} className="text-[#3B6D11]" /> },
+  { id: 'fire-readiness', category: 'Retirement & Generational Wealth', name: 'FIRE Readiness', desc: 'Check if you can safely retire now with your current corpus', icon: <TrendingUp size={24} className="text-[#3B6D11]" /> },
+  { id: 'fire-date', category: 'Retirement & Generational Wealth', name: 'Retirement Date', desc: 'Find out the exact year and age when you can retire', icon: <Search size={24} className="text-[#3B6D11]" /> },
+
   { id: 'home', category: 'Loan Calculators', name: 'Home Loan Calculator', desc: 'Calculate EMI, total interest and amortisation for your home loan', icon: <Home size={24} className="text-[#A32D2D]" /> },
   { id: 'car', category: 'Loan Calculators', name: 'Car Loan Calculator', desc: 'Calculate monthly EMI and total cost for your car loan', icon: <Car size={24} className="text-[#A32D2D]" /> },
   { id: 'personal', category: 'Loan Calculators', name: 'Personal Loan Calculator', desc: 'Calculate EMI and repayment schedule for your personal loan', icon: <Calculator size={24} className="text-[#A32D2D]" /> },
@@ -23,8 +29,8 @@ export default function App() {
   const symbol = useCurrency();
   const theme = useTheme();
 
-  if (activeId === 'fire') {
-    return <FireCalculator onBack={() => setActiveId(null)} />;
+  if (activeId && activeId.startsWith('fire')) {
+    return <FireCalculator id={activeId} onBack={() => setActiveId(null)} />;
   }
 
   if (activeId) {
@@ -39,6 +45,7 @@ export default function App() {
 
   const filtered = CALCULATORS.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.desc.toLowerCase().includes(search.toLowerCase()));
   const investments = filtered.filter(c => c.category === 'Investment Calculators');
+  const retirement = filtered.filter(c => c.category === 'Retirement & Generational Wealth');
   const loans = filtered.filter(c => c.category === 'Loan Calculators');
 
   return (
@@ -89,9 +96,17 @@ export default function App() {
             </div>
           </section>
         )}
+        {retirement.length > 0 && (
+          <section>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2"><LandmarkIcon className="text-[#3B6D11]"/> Retirement & Generational Wealth</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {retirement.map(calc => <CalcCard key={calc.id} calc={calc} onClick={() => setActiveId(calc.id)} />)}
+            </div>
+          </section>
+        )}
         {loans.length > 0 && (
           <section>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2"><LandmarkIcon className="text-[#A32D2D]"/> Loan Calculators</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2"><Home className="text-[#A32D2D]"/> Loan Calculators</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {loans.map(calc => <CalcCard key={calc.id} calc={calc} onClick={() => setActiveId(calc.id)} />)}
             </div>

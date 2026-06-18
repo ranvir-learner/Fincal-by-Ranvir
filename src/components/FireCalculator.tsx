@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Home, HelpCircle } from 'lucide-react';
 import { InputControl } from './InputControl';
-import { formatINR } from '../lib/utils';
+import { formatINR, useLocalStorage } from '../lib/utils';
 import { useCurrency } from '../lib/store';
 import { InfoModal } from './InfoModal';
 import {
@@ -17,13 +17,14 @@ import {
   ReferenceLine
 } from "recharts";
 
-export function FireCalculator({ onBack }: { onBack?: () => void }) {
+export function FireCalculator({ id, onBack }: { id?: string, onBack?: () => void }) {
   const symbol = useCurrency();
-  const [mode, setMode] = useState<'target' | 'readiness' | 'date'>('target');
+
+  const title = id === 'fire-target' ? "How much do I need?" : id === 'fire-readiness' ? "Can I retire now?" : "When can I retire?";
 
   return (
-    <div className="flex-1 flex items-start w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300 flex-col">
-      <div className="w-full flex items-center justify-start gap-3 p-4 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-colors duration-300">
+    <div className="flex-1 flex items-start w-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300 flex-col h-[100dvh]">
+      <div className="w-full flex items-center justify-start gap-3 p-4 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto shrink-0 transition-colors duration-300">
         {onBack && (
            <button onClick={onBack} className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-[#185FA5] dark:hover:text-[#4299E1] mr-2 shrink-0 transition-colors group">
              <div className="w-8 h-8 bg-[#185FA5] rounded-xl flex items-center justify-center shadow-md shadow-blue-200 dark:shadow-none shrink-0 select-none">
@@ -35,41 +36,12 @@ export function FireCalculator({ onBack }: { onBack?: () => void }) {
            </button>
         )}
         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-        <button
-          onClick={() => setMode('target')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-colors shrink-0 ${
-            mode === 'target' 
-              ? 'bg-[#185FA5] text-white shadow-sm' 
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          How much do I need?
-        </button>
-        <button
-          onClick={() => setMode('readiness')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-colors shrink-0 ${
-            mode === 'readiness' 
-              ? 'bg-[#185FA5] text-white shadow-sm' 
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          Can I retire now?
-        </button>
-        <button
-          onClick={() => setMode('date')}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-colors shrink-0 ${
-            mode === 'date' 
-              ? 'bg-[#185FA5] text-white shadow-sm' 
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          When can I retire?
-        </button>
+        <h2 className="text-lg sm:text-xl font-bold truncate tracking-tight text-slate-800 dark:text-slate-100">{title}</h2>
       </div>
-      <div className="flex-1 w-full overflow-hidden flex flex-col h-full bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
-        {mode === 'target' && <FireTargetMode />}
-        {mode === 'readiness' && <FireReadinessMode />}
-        {mode === 'date' && <FireDateMode />}
+      <div className="flex-1 w-full overflow-hidden flex flex-col bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
+        {id === 'fire-target' && <FireTargetMode />}
+        {id === 'fire-readiness' && <FireReadinessMode />}
+        {id === 'fire-date' && <FireDateMode />}
       </div>
     </div>
   );
@@ -91,14 +63,14 @@ function FireTargetInfo() {
 function FireTargetMode() {
   const symbol = useCurrency();
   const [infoOpen, setInfoOpen] = useState(false);
-  const [params, setParams] = useState({
-    monthlyExpense: 0,
-    currentAge: 0,
-    targetRetirementAge: 0,
-    inflationRate: 0,
-    postRetirementReturn: 0,
-    withdrawalPeriod: 0,
-    preRetirementReturn: 0,
+  const [params, setParams] = useLocalStorage('fire-target-params', {
+    monthlyExpense: 50000,
+    currentAge: 30,
+    targetRetirementAge: 50,
+    inflationRate: 6,
+    postRetirementReturn: 8,
+    withdrawalPeriod: 40,
+    preRetirementReturn: 12,
   });
 
   const updateParam = (key: string, value: number) => {
@@ -222,11 +194,11 @@ function FireReadinessInfo() {
 function FireReadinessMode() {
   const symbol = useCurrency();
   const [infoOpen, setInfoOpen] = useState(false);
-  const [params, setParams] = useState({
-    currentCorpus: 0,
-    monthlyExpense: 0,
-    returnRate: 0,
-    inflationRate: 0,
+  const [params, setParams] = useLocalStorage('fire-readiness-params', {
+    currentCorpus: 10000000,
+    monthlyExpense: 50000,
+    returnRate: 10,
+    inflationRate: 6,
   });
 
   const updateParam = (key: string, value: number) => {
@@ -237,7 +209,7 @@ function FireReadinessMode() {
     let corpus = params.currentCorpus;
     let annualExpense = params.monthlyExpense * 12;
     let years = 0;
-    const data = [{ year: 0, corpus, expense: annualExpense/12 }];
+    const data = [{ year: 0, corpus, expense: annualExpense/12, isDepleted: corpus <= annualExpense * 2 }];
 
     if (corpus <= 0 && annualExpense <= 0) return { yearData: data, lastsYears: 0 };
 
@@ -249,7 +221,7 @@ function FireReadinessMode() {
          corpus = corpus * (1 + params.returnRate / 100);
       }
       years++;
-      data.push({ year: years, corpus: Math.max(0, corpus), expense: annualExpense/12 });
+      data.push({ year: years, corpus: Math.max(0, corpus), expense: annualExpense/12, isDepleted: corpus <= annualExpense * 2 });
     }
     return { yearData: data, lastsYears: years };
   }, [params.currentCorpus, params.monthlyExpense, params.returnRate, params.inflationRate]);
@@ -326,16 +298,16 @@ function FireDateInfo() {
 function FireDateMode() {
   const symbol = useCurrency();
   const [infoOpen, setInfoOpen] = useState(false);
-  const [params, setParams] = useState({
-    currentAge: 0,
-    currentSavings: 0,
-    monthlySIP: 0,
-    stepUpRate: 0,
-    preRetirementReturn: 0,
-    postRetirementReturn: 0,
-    monthlyExpense: 0,
-    inflationRate: 0,
-    withdrawalPeriod: 0
+  const [params, setParams] = useLocalStorage('fire-date-params', {
+    currentAge: 30,
+    currentSavings: 1500000,
+    monthlySIP: 20000,
+    stepUpRate: 10,
+    preRetirementReturn: 12,
+    postRetirementReturn: 8,
+    monthlyExpense: 50000,
+    inflationRate: 6,
+    withdrawalPeriod: 40
   });
 
   const updateParam = (key: string, value: number) => {
