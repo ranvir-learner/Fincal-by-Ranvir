@@ -1,0 +1,6 @@
+{
+  "name": "FinCalc",
+  "description": "Financial calculator for loans and investments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
