@@ -4,7 +4,12 @@ import { InputControl } from './components/InputControl';
 import { formatINR as fi, calcEMI, buildAmortisation, calcEffectiveAPR } from './lib/utils';
 import { Line, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
+import { DebtPayoffStrategy } from './components/DebtPayoffStrategy';
+
 export function CalculatorViews({ id, title, subtitle, onBack }: any) {
+  if (id === 'debt-payoff') {
+    return <DebtPayoffStrategy key={id} title={title} subtitle={subtitle} onBack={onBack} />;
+  }
   if (['home', 'car', 'personal'].includes(id)) {
     return <LoanCalculator key={id} type={id} title={title} subtitle={subtitle} onBack={onBack} />;
   }
@@ -41,6 +46,25 @@ function getLoanInfo(type: string) {
   );
 }
 
+function getLoanFaq() {
+  return (
+    <>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">What is the difference between flat interest and reducing balance?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Our calculator uses the standard reducing balance method, where interest is calculated only on the remaining outstanding principal each month. Flat interest, conversely, calculates interest on the full initial loan amount throughout the tenure, which results in a much higher effective cost.</p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">How does the processing fee affect my loan?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">The processing fee is typically deducted from the disbursed loan amount. While it doesn't change your monthly EMI, it increases your Effective APR (Annual Percentage Rate) because you effectively receive less money than you borrow.</p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Should I make prepayments?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Making prepayments (part payments) early in your loan tenure significantly reduces your outstanding principal, saving you a substantial amount on total interest paid over time.</p>
+      </div>
+    </>
+  );
+}
+
 // -----------------------------------------
 // LOAN CALCULATOR ENGINE
 // -----------------------------------------
@@ -64,6 +88,8 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
        prepayment: 0
      };
   })());
+
+  const [history, setHistory] = useLocalStorage<any[]>(`calc_history_${type}`, []);
 
   const up = (k:string, v:number) => setParams(p => ({...p, [k]: v}));
   
@@ -93,14 +119,22 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
     };
   }, [params, isCar]);
 
+  const handleSaveHistory = (name?: string) => {
+    const summary = `${symbol}${fi(emi)} EMI • ${params.tenure} YRS`;
+    const newEntry = { id: Date.now().toString(), date: new Date().toISOString(), params, summary, name };
+    setHistory((prev: any[]) => [newEntry, ...prev].slice(0, 10));
+  };
+  const handleLoadHistory = (item: any) => setParams(item.params);
+  const handleDeleteHistory = (id: string) => setHistory((prev: any[]) => prev.filter(i => i.id !== id));
+
   const inputs = (
     <>
       <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Loan Details</h2>
       <InputControl label={isCar ? `Car Price (${symbol})` : `Loan Amount (${symbol})`} value={params.principal} onChange={(v) => up('principal', v)} min={1000} prefix={symbol} />
       {isCar && <InputControl label={`Down Payment (${symbol})`} value={params.downPayment} onChange={(v) => up('downPayment', v)} min={0} prefix={symbol} />}
-      <InputControl label="Interest Rate" value={params.rate} onChange={(v) => up('rate', v)} min={0} max={50} step={0.1} suffix="%" />
-      <InputControl label="Tenure (Years)" value={params.tenure} onChange={(v) => up('tenure', v)} min={1} max={30} />
-      <InputControl label="Processing Fee" value={params.fee} onChange={(v) => up('fee', v)} min={0} max={10} step={0.1} suffix="%" />
+      <InputControl label="Interest Rate" value={params.rate} onChange={(v) => up('rate', v)} min={0} max={50} step={0.1} suffix="%" smartTip="Even a 0.5% lower rate can save you massive amounts in interest over a long tenure. Always try to negotiate!" />
+      <InputControl label="Tenure (Years)" value={params.tenure} onChange={(v) => up('tenure', v)} min={1} max={30} smartTip="Shorter tenures drastically reduce the total interest you pay, even if they mean slightly higher EMIs." />
+      <InputControl label="Processing Fee" value={params.fee} onChange={(v) => up('fee', v)} min={0} max={10} step={0.1} suffix="%" smartTip="Processing fees are often negotiable. Ask your lender for a waiver to maximize your dispersed loan amount." />
     </>
   );
 
@@ -121,14 +155,14 @@ function LoanCalculator({ type, title, subtitle, onBack }: any) {
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
         <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `Yr ${v}`} />
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => fi(v).replace(symbol,'')} />
-        <Tooltip cursor={{ fill: "#f8fafc" }} formatter={(v: number) => fi(v)} labelFormatter={(l) => `Year ${l}`} />
+        <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={{ backgroundColor: "white", borderColor: "#e2e8f0", borderRadius: "8px", color: "#000" }} labelStyle={{ color: "#000", fontWeight: "bold" }} itemStyle={{ color: "#000" }} formatter={(v: number) => fi(v)} labelFormatter={(l) => `Year ${l}`} />
         <Bar dataKey="principal" name="Principal Paid" fill="#185FA5" stackId="a" />
         <Bar dataKey="interest" name="Interest Paid" fill="#A32D2D" stackId="a" />
       </ComposedChart>
     </ResponsiveContainer>
   );
 
-  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} infoContent={getLoanInfo(type)} />;
+  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} infoContent={getLoanInfo(type)} onSave={handleSaveHistory} historyList={history} onLoadHistory={handleLoadHistory} onDeleteHistory={handleDeleteHistory} faqContent={getLoanFaq()} />;
 }
 
 function getInvestmentInfo(type: string) {
@@ -193,6 +227,25 @@ function getInvestmentInfo(type: string) {
   );
 }
 
+function getInvestmentFaq() {
+  return (
+    <>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">How does inflation affect my returns?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Inflation decreases the purchasing power of your money over time. Even if your investment grows to a large number, its "real value" (adjusted for inflation) shows what it will actually be able to buy in today's terms.</p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">What does 'Step-up' mean?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">A step-up SIP allows you to increase your investment amount by a fixed percentage every year, typically matching your income growth. It significantly boosts the final corpus without straining your current budget.</p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Are these projected returns guaranteed?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">No, except for fixed-income instruments like FDs and PPF. Returns on Mutual Funds and equity are subject to market risks, and the calculator only provides an estimate based on your assumed rate.</p>
+      </div>
+    </>
+  );
+}
+
 // -----------------------------------------
 // INVESTMENT CALCULATOR ENGINE
 // -----------------------------------------
@@ -217,6 +270,9 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
        swpRate: swp
      };
   })());
+  
+  const [history, setHistory] = useLocalStorage<any[]>(`calc_history_${type}`, []);
+
   const up = (k:string, v:number) => setParams(p => ({...p, [k]: v}));
 
   const { chartData, totals } = useMemo(() => {
@@ -256,16 +312,24 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
     return { chartData: data, totals: { inv, corp } };
   }, [type, params]);
 
+  const handleSaveHistory = (name?: string) => {
+    const summary = `${symbol}${fi(totals.corp)} Final | ${params.period} YRS`;
+    const newEntry = { id: Date.now().toString(), date: new Date().toISOString(), params, summary, name };
+    setHistory((prev: any[]) => [newEntry, ...prev].slice(0, 10));
+  };
+  const handleLoadHistory = (item: any) => setParams(item.params);
+  const handleDeleteHistory = (id: string) => setHistory((prev: any[]) => prev.filter(i => i.id !== id));
+
   const inputs = (
     <>
       <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 col-span-2 md:col-span-1">Parameters</h2>
       <InputControl label={type === 'swp' ? `Initial Corpus (${symbol})` : type === 'lumpsum' || type === 'fd' ? `Lumpsum (${symbol})` : type === 'ppf' ? `Yearly Invest (${symbol})` : `Monthly Invest (${symbol})`} value={params.invest} onChange={(v) => up('invest', v)} min={0} prefix={symbol} />
-      {type === 'swp' && <InputControl label={`Monthly Withdrawal (${symbol})`} value={params.swpRate} onChange={(v) => up('swpRate', v)} min={1} prefix={symbol} />}
-      <InputControl label="Expected Return" value={params.rate} onChange={(v) => up('rate', v)} min={0} max={100} step={0.1} suffix="%" />
-      <InputControl label="Time Period (Years)" value={params.period} onChange={(v) => up('period', v)} min={1} max={100} />
-      {['sip', 'lumpsum', 'mf'].includes(type) && <InputControl label="Inflation Rate" value={params.inflation} onChange={(v) => up('inflation', v)} min={0} max={30} step={0.1} suffix="%" />}
-      {['sip', 'mf'].includes(type) && <InputControl label="Annual Step-up" value={params.stepup} onChange={(v) => up('stepup', v)} min={0} max={100} step={1} suffix="%" />}
-      {type === 'mf' && <InputControl label="Expense Ratio" value={params.expense} onChange={(v) => up('expense', v)} min={0} max={5} step={0.1} suffix="%" />}
+      {type === 'swp' && <InputControl label={`Monthly Withdrawal (${symbol})`} value={params.swpRate} onChange={(v) => up('swpRate', v)} min={1} prefix={symbol} smartTip="Withdrawing more than your expected return guarantees portfolio depletion." />}
+      <InputControl label="Expected Return" value={params.rate} onChange={(v) => up('rate', v)} min={0} max={100} step={0.1} suffix="%" smartTip="For long-term equity investing (10+ years), a 10-12% average is realistic. For FDs, use 6-7%." />
+      <InputControl label="Time Period (Years)" value={params.period} onChange={(v) => up('period', v)} min={1} max={100} smartTip="Compounding does the heavy lifting in the later years. Extending your period by just 5 years can double your final corpus." />
+      {['sip', 'lumpsum', 'mf'].includes(type) && <InputControl label="Inflation Rate" value={params.inflation} onChange={(v) => up('inflation', v)} min={0} max={30} step={0.1} suffix="%" smartTip="Historical long-term inflation in India averages around 6%. Your returns must clear this hurdle to create real purchasing power." />}
+      {['sip', 'mf'].includes(type) && <InputControl label="Annual Step-up" value={params.stepup} onChange={(v) => up('stepup', v)} min={0} max={100} step={1} suffix="%" smartTip="Stepping up your SIPs with your annual salary increments is the single most powerful way to build wealth quickly." />}
+      {type === 'mf' && <InputControl label="Expense Ratio" value={params.expense} onChange={(v) => up('expense', v)} min={0} max={5} step={0.1} suffix="%" smartTip="Direct mutual funds have lower expense ratios than regular ones, meaning more of the returns stay in your pocket." />}
     </>
   );
 
@@ -290,7 +354,7 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
         <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `Yr ${v}`} />
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => fi(v).replace(symbol,'')} />
-        <Tooltip cursor={{ fill: "#f8fafc" }} formatter={(v: number) => fi(v)} labelFormatter={(l) => `Year ${l}`} />
+        <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={{ backgroundColor: "white", borderColor: "#e2e8f0", borderRadius: "8px", color: "#000" }} labelStyle={{ color: "#000", fontWeight: "bold" }} itemStyle={{ color: "#000" }} formatter={(v: number) => fi(v)} labelFormatter={(l) => `Year ${l}`} />
         {type === 'swp' ? (
           <Bar dataKey="corp" name="Remaining Corpus" fill="#185FA5" radius={[2, 2, 0, 0]} />
         ) : (
@@ -303,6 +367,6 @@ function InvestmentCalculator({ type, title, subtitle, onBack }: any) {
     </ResponsiveContainer>
   );
 
-  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} infoContent={getInvestmentInfo(type)} />;
+  return <CalculatorLayout title={title} subtitle={subtitle} onBack={onBack} inputs={inputs} outputs={outputs} chart={chart} infoContent={getInvestmentInfo(type)} onSave={handleSaveHistory} historyList={history} onLoadHistory={handleLoadHistory} onDeleteHistory={handleDeleteHistory} faqContent={getInvestmentFaq()} />;
 }
 

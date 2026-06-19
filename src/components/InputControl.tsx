@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { cn } from "../lib/utils";
+import { Lightbulb } from "lucide-react";
 
 interface InputControlProps {
   label: string;
@@ -13,6 +14,7 @@ interface InputControlProps {
   hint?: string;
   warningMessage?: string;
   showSlider?: boolean;
+  smartTip?: string;
 }
 
 const formatIndianComma = (valStr: string | number) => {
@@ -41,11 +43,13 @@ export const InputControl: React.FC<InputControlProps> = ({
   hint = '',
   warningMessage,
   showSlider = false,
+  smartTip,
 }) => {
   const [warning, setWarning] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [localVal, setLocalVal] = useState(formatIndianComma(value));
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
     if (!isFocused) {
@@ -107,11 +111,26 @@ export const InputControl: React.FC<InputControlProps> = ({
   };
 
   return (
-    <div className="space-y-1.5 w-full">
+    <div className="space-y-1.5 w-full relative">
       <div className="flex justify-between items-baseline">
-        <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
-          {label}
-        </label>
+        <div className="flex items-center gap-1.5 relative" onMouseEnter={() => setShowTip(true)} onMouseLeave={() => setShowTip(false)}>
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+            {label}
+          </label>
+          {smartTip && (
+            <button type="button" onClick={() => setShowTip(!showTip)} className="text-amber-500 hover:text-amber-600 transition-colors focus:outline-none">
+              <Lightbulb size={14} className="animate-pulse hover:animate-none" />
+            </button>
+          )}
+          {smartTip && showTip && (
+            <div className="absolute z-50 left-0 bottom-full mb-2 w-56 sm:w-64 p-3 bg-slate-800 dark:bg-slate-700 text-white rounded-lg shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1">
+                <Lightbulb size={10} /> Smart Tip
+              </p>
+              <p className="text-xs leading-relaxed text-slate-200">{smartTip}</p>
+            </div>
+          )}
+        </div>
         <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
           {hint}
         </span>

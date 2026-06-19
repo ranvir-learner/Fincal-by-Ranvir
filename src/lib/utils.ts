@@ -70,5 +70,5 @@ export function calcEffectiveAPR(emi: number, tenureMonths: number, netDisbursed
     const pv = mr === 0 ? emi * tenureMonths : emi * (1 - Math.pow(1+mr, -tenureMonths)) / mr;
     if (pv > netDisbursed) lo = mid; else hi = mid;
   }
-  return ((lo + hi) / 2) * 100 * 12;
+  return ((lo + hi) / 2) * 100;
 }

@@ -47,3 +47,15 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   }
 }
 
+@media print {
+  div {
+    overflow-y: visible !important;
+    overflow-x: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .recharts-wrapper {
+    max-width: 100% !important;
+  }
+}
+

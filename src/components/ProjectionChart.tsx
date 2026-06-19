@@ -20,16 +20,16 @@ export const ProjectionChart: React.FC<ChartProps> = ({ data }) => {
   const customTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-slate-200 shadow-md rounded-md text-slate-800">
-          <p className="font-semibold text-slate-700 mb-2">Year {label}</p>
+        <div className="bg-white p-3 border border-slate-200 shadow-md rounded-md text-black">
+          <p className="font-semibold text-black mb-2">Year {label}</p>
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center gap-2 text-[11px] mb-1">
               <span
                 className="w-2.5 h-2.5 rounded-sm inline-block"
                 style={{ backgroundColor: entry.color }}
               ></span>
-              <span className="text-slate-500 font-medium">{entry.name}:</span>
-              <span className="font-bold text-slate-800">
+              <span className="text-black font-medium">{entry.name}:</span>
+              <span className="font-bold text-black">
                 {formatINR(entry.value)}
               </span>
             </div>
